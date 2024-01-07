@@ -1,105 +1,79 @@
 const express = require ("express")  // Aqui estou iniciando o express
-const router= express.Router()  // Aqui estou configurando a primeira parte da rota
-const { v4: uuidv4 } = require('uuid');
+const router= express.Router()  // Aqui estou configurando a primeira parte da rota 
+const cors = require('cors') //instalação do pacote cors, que permite consumir no front end 
 
 const conectaBancoDeDados = require('./bancoDeDados') //Ligando ao arquivo Banco de Dados
 conectaBancoDeDados ()//Chamando a função que conecta o banco de dados 
+const Mulher = require('./mulherModel')
+
 
 const app = express()  // Aqui estou iniciando o App
 app.use(express.json())
-
+app.use(cors())
 
 const porta = 3333 //Aqui estou criando a porta
 
-// Aqui estou criando a lista inicial de mulheres
-const mulheres = [
-    {
-        id: '1',
-        nome: 'Simara Conceição',
-     
-        imagem: 'https://bit.ly/3LJIyOF',
-     
-        minibio: 'Desenvolvedora e instrutora',
-     
-      },
-     
-      {
-        id: '2',
-        nome: 'Iana Chan',
-        imagem: 'https://bit.ly/3JCXBqP',
-     
-        minibio: 'CEO & Founder da PrograMaria',
-     
-      },
-     
-      {
-        id: '3',
-        nome: 'Luana Pimentel',
-     
-        imagem: 'https://bit.ly/3FKpFaz',
-     
-        minibio: 'Senior Staff Software Engineer',
-     
-      }
-      
-]
-
-
 //Get
-function mostraMulheres(request, response) {
-    response.json(mulheres)
+async function mostraMulheres(request, response) {
+  try{
+    const mulheresVindasDoBancoDeDados = await Mulher.find()
+
+    response.json(mulheresVindasDoBancoDeDados)
+  }catch(erro){
+    console.log(erro)
+
+  }
+  
 }
 
 //POST //Toda função atrelada a uma rota ela recebe os parametros Request e response
-function criaMulher(request, response){
-  const novaMulher = {
-    id: uuidv4(),
+async function criaMulher(request, response){
+    
+  const novaMulher = new Mulher({
     nome: request.body.nome,
     imagem: request.body.imagem,
-    minibio: request.body.minibio
-  }
-  mulheres.push(novaMulher)
-    
-    response.json(mulheres)
+    minibio: request.body.minibio,
+    citacao: request.body.citacao
+  })
+      try {
+        const mulherCriada = await novaMulher.save()
+        response.status(201).json(mulherCriada)
+
+      } catch(erro) {
+        console.log(erro)
+      }
 }
 //PATCH
-function corrigeMulher(request, response){
-  function encontraMulher(mulher){
-    if (mulher.id === request.params.id){
-        return mulher 
-    }
-
-  }
-        const mulherEncontrada = mulheres.find(encontraMulher)
-
-  if (request.body.nome){
-    mulherEncontrada.nome = request.body.nome
-  }
-  if (request.body.minibio){
-    mulherEncontrada.minibio = request.body.minibio
-  }
-  if (request.body.imagem){
-    mulherEncontrada.imagem = request.body.imagem
-  }
-response.json(mulheres)
-
+async function corrigeMulher(request, response){
+      try{
+        const mulherEncontrada = await Mulher.findById(request.params.id)
+        if (request.body.nome){
+          mulherEncontrada.nome = request.body.nome
+        }
+        if (request.body.imagem){
+          mulherEncontrada.imagem = request.body.imagem
+        }
+        if(request.body.minibio){
+          mulherEncontrada.minibio = request.body.minibio
+        }
+        if(request.body.citacao){
+          mulherEncontrada.citacao = request.body.citacao
+        }
+        const mulherAtualizadaNoBancoDeDados = await mulherEncontrada.save()
+        
+        response.json(mulherAtualizadaNoBancoDeDados)
+      } catch(erro) {
+        console.log(erro)
+      }
 }
 //DELETE
-function deletaMulher(request, response) {
+async function deletaMulher(request, response) {
 
-  function todasMenosEla(mulher) {
- 
-    if (mulher.id !== request.params.id) {
- 
-      return mulher
- 
-    }
- 
-  }
- 
-  const mulheresQueFicaram = mulheres.filter(todasMenosEla)
-  response.json(mulheresQueFicaram)
- 
+  try{
+      await Mulher.findByIdAndDelete(request.params.id)
+      response.json({Messagem : 'Mulher deletada com sucesso!'})
+  } catch(erro) {
+    console.log(erro)  }
  }
 // Porta
 function mostraPorta() {
